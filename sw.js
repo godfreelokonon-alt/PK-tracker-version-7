@@ -1,4 +1,4 @@
-const VERSION = 'v6.0.0';
+const VERSION = 'v7.2.0';
 const CACHE_APP = `pkt-app-${VERSION}`;
 const CACHE_DATA = `pkt-data-${VERSION}`;
 
