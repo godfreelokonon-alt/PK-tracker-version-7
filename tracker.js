@@ -273,7 +273,7 @@ function onGPS(pos) {
   const dt = (Date.now() - state.lastPos.ts) / 1000;
 
   // Seuil adaptatif anti-bruit stationnaire
-  const threshold = Math.max(1.5, acc * 0.4);
+  const threshold = Math.max(0.3, acc * 0.08);
   if (d < threshold) {
     state.lastPos = { lat: la, lon: lo, ts: Date.now(), acc };
     notify();
