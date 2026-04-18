@@ -278,15 +278,17 @@ async function stopSession() {
   $('mark-zone').classList.remove('visible');
 }
 
+// buildRefTrace v7 : délégué à tracker.js (prepareRefTrace interne)
+// La trace brute GPS est maintenant débruitée par Douglas-Peucker (4 m)
+// avant d'être stockée comme référence — plus besoin de reconstruire ici.
 function buildRefTrace(trace, pkStart) {
-  const out = [];
+  // On stocke la trace brute Kalman-filtrée ;
+  // tracker.js appliquera Douglas-Peucker au chargement en mode chantier.
   let dist = 0;
+  const out = [];
   for (let i = 0; i < trace.length; i++) {
-    const p = trace[i];
-    if (i > 0) {
-      dist += PKT_GEO.haversine(trace[i-1].lat, trace[i-1].lon, p.lat, p.lon);
-    }
-    out.push({ lat: p.lat, lon: p.lon, pk_m: pkStart + dist });
+    if (i > 0) dist += PKT_GEO.haversine(trace[i-1].lat, trace[i-1].lon, trace[i].lat, trace[i].lon);
+    out.push({ lat: trace[i].lat, lon: trace[i].lon, pk_m: pkStart + dist });
   }
   return out;
 }
@@ -326,6 +328,15 @@ function refreshTrackingUI(s) {
   $('telem-speed').textContent = s.speed != null ? s.speed : '—';
   $('telem-steps').textContent = s.steps || 0;
 
+  // Indicateur GPS perdu (mode tunnel / zone couverte)
+  const gpsLostEl = $('gps-lost-banner');
+  if (gpsLostEl) {
+    gpsLostEl.style.display = s.gpsLost ? 'flex' : 'none';
+    if (s.gpsLost) {
+      gpsLostEl.textContent = '📡 GPS perdu — PK estimé par pas (' + (s.steps||0) + ' pas · ±' + s.drift + ' m)';
+    }
+  }
+
   // Progress bar
   if (s.pkFin && app.sessionOpts) {
     const range = Math.abs(s.pkFin - (app.sessionOpts.pkStart || 0));
@@ -360,6 +371,9 @@ PKT_TRACKER.onEvent(async (type, data) => {
   }
   if (type === 'gps-degraded') {
     toast('GPS dégradé ±' + Math.round(data.acc) + ' m — confiance diminuée', 'warn');
+  }
+  if (type === 'gps-lost') {
+    toast('📡 GPS perdu — PK continue par podomètre', 'warn', 4000);
   }
   if (type === 'gps-error') {
     toast('Erreur GPS : ' + data.message, 'error');
